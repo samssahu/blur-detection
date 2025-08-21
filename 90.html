@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Check Green Percentage</title>
+</head>
+<body>
+<input type="file" id="upload" accept="image/*">
+<canvas id="canvas" style="display:none;"></canvas>
+<p id="result"></p>
+
+<script>
+// Convert RGB to HSV
+function rgbToHsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  let max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, v = max;
+
+  let d = max - min;
+  s = max === 0 ? 0 : d / max;
+
+  if (max === min) {
+    h = 0; // achromatic
+  } else {
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+
+  return [h * 360, s, v]; // Hue in degrees
+}
+
+document.getElementById("upload").addEventListener("change", function(e) {
+  let file = e.target.files[0];
+  if (!file) return;
+
+  let img = new Image();
+  img.onload = function() {
+    let canvas = document.getElementById("canvas");
+    let ctx = canvas.getContext("2d");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+
+    let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let data = imageData.data;
+
+    let greenPixels = 0;
+    let totalPixels = canvas.width * canvas.height;
+
+    for (let i = 0; i < data.length; i += 4) {
+      let r = data[i];
+      let g = data[i+1];
+      let b = data[i+2];
+      let [h, s, v] = rgbToHsv(r, g, b);
+
+      // Define green range: Hue ~60-165°, decent saturation, not too dark
+      if (h >= 60 && h <= 165 && s > 0.2 && v > 0.2) {
+        greenPixels++;
+      }
+    }
+
+    let percentage = greenPixels / totalPixels;
+    let resultText = `Green Pixels: ${(percentage*100).toFixed(2)}%`;
+    if (percentage >= 0.9) {
+      resultText += " ✅ Image is at least 90% green!";
+    } else {
+      resultText += " ❌ Image is not 90% green.";
+    }
+
+    document.getElementById("result").innerText = resultText;
+  };
+
+  img.src = URL.createObjectURL(file);
+});
+</script>
+</body>
+</html>
